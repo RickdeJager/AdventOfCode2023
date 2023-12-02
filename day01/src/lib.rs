@@ -5,49 +5,43 @@ pub fn part1(input: &Vec<String>) -> usize {
     let mut sum: usize = 0;
 
     for line in input {
-        let mut first = 0;
-        let mut last = 0;
-        for c in line.chars() {
-            if c.is_digit(10) {
-                first = c.to_digit(10).unwrap() as usize;
-                break;
-            }
-        }
-
-        for c in line.chars().rev() {
-            if c.is_digit(10) {
-                last = c.to_digit(10).unwrap() as usize;
-                break;
-            }
-        }
-
+        let first = line
+            .chars()
+            .find(char::is_ascii_digit)
+            .expect("No first digit found")
+            .to_digit(10)
+            .unwrap() as usize;
+        let last = line
+            .chars()
+            .rfind(char::is_ascii_digit)
+            .expect("No last digit found")
+            .to_digit(10)
+            .unwrap() as usize;
         sum += first * 10 + last;
     }
 
     sum
 }
 
-const TOKENS: [(&'static str, usize); 20] = [
-    ("zero", 0),
-    ("0", 0),
-    ("one", 1),
+const TOKENS: [(&str, usize); 18] = [
     ("1", 1),
-    ("two", 2),
     ("2", 2),
-    ("three", 3),
     ("3", 3),
-    ("four", 4),
     ("4", 4),
-    ("five", 5),
     ("5", 5),
-    ("six", 6),
     ("6", 6),
-    ("seven", 7),
     ("7", 7),
-    ("eight", 8),
     ("8", 8),
-    ("nine", 9),
     ("9", 9),
+    ("one", 1),
+    ("two", 2),
+    ("three", 3),
+    ("four", 4),
+    ("five", 5),
+    ("six", 6),
+    ("seven", 7),
+    ("eight", 8),
+    ("nine", 9),
 ];
 
 pub fn part2(input: &Vec<String>) -> usize {
