@@ -2,17 +2,18 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 
 #[derive(Debug)]
-pub struct Elem {
-    id: Option<u32>,
-    symbol: Option<char>,
-    value: Option<u32>,
+enum Elem {
+    Empty,
+    Symbol(char),
+    /// Part Number (id, value)
+    Number(u32, u32),
 }
 
 #[derive(Debug)]
 pub struct Schematic {
     w: usize,
     h: usize,
-    data: Vec<Vec<Option<Elem>>>,
+    data: Vec<Vec<Elem>>,
 }
 
 impl Schematic {
@@ -30,7 +31,7 @@ impl Schematic {
             while idx < w {
                 match line[idx] {
                     b'.' => {
-                        row.push(None);
+                        row.push(Elem::Empty);
                     }
                     b'0' | b'1' | b'2' | b'3' | b'4' | b'5' | b'6' | b'7' | b'8' | b'9' => {
                         let mut num = 1;
@@ -41,19 +42,11 @@ impl Schematic {
                             num += 1;
                         }
                         for _ in 0..num {
-                            row.push(Some(Elem {
-                                id: Some(cur_id),
-                                symbol: None,
-                                value: Some(val),
-                            }));
+                            row.push(Elem::Number(cur_id, val));
                         }
                         cur_id += 1;
                     }
-                    x => row.push(Some(Elem {
-                        id: None,
-                        symbol: Some(x as char),
-                        value: None,
-                    })),
+                    x => row.push(Elem::Symbol(x as char)),
                 }
                 idx += 1;
             }
@@ -75,17 +68,17 @@ impl Schematic {
                 if dx == x && dy == y {
                     continue;
                 }
-                if let Some(Some(elem)) = self
+                if let Some(elem) = self
                     .data
                     .get(dy as usize)
                     .and_then(|row| row.get(dx as usize))
                 {
-                    // Dedupe numbers to make part2 a little easier
-                    if let Some(id) = elem.id {
-                        if seen.contains(&id) {
+                    if let Elem::Number(id, _val) = elem {
+                        // Dedupe numbers to make part2 a little easier
+                        if seen.contains(id) {
                             continue;
                         }
-                        seen[((x - dx + 1) * 3 + (y - dy + 1)) as usize] = id;
+                        seen[((x - dx + 1) * 3 + (y - dy + 1)) as usize] = *id;
                     }
                     neighbors.push(elem);
                 }
@@ -103,16 +96,13 @@ pub fn part1(input: &Schematic) -> usize {
     let mut neighbors = Vec::<&Elem>::new();
     for y in 0..input.h {
         for x in 0..input.w {
-            if let Some(elem) = &input.data[y][x] {
-                if let Some(id) = elem.id {
-                    if cur_id < id {
-                        // update neighbors
-                        input.get_neighbors(&mut neighbors, x, y);
-                        if neighbors.iter().any(|elem| elem.symbol.is_some()) {
-                            let val = elem.value.unwrap() as usize;
-                            res += val;
-                            cur_id = id;
-                        }
+            if let Elem::Number(id, value) = input.data[y][x] {
+                if cur_id < id {
+                    // update the neighbors vec
+                    input.get_neighbors(&mut neighbors, x, y);
+                    if neighbors.iter().any(|elem| matches!(elem, Elem::Symbol(_))) {
+                        res += value as usize;
+                        cur_id = id;
                     }
                 }
             }
@@ -126,16 +116,19 @@ pub fn part2(input: &Schematic) -> u32 {
     let mut neighbors = Vec::new();
     for y in 0..input.h {
         for x in 0..input.w {
-            if let Some(elem) = &input.data[y][x] {
-                if let Some('*') = elem.symbol {
-                    input.get_neighbors(&mut neighbors, x, y);
-                    let number_neighbors = neighbors
-                        .iter()
-                        .filter_map(|elem| elem.value)
-                        .collect::<Vec<u32>>();
-                    if number_neighbors.len() == 2 {
-                        res += number_neighbors[0] * number_neighbors[1]
-                    }
+            if let Elem::Symbol('*') = &input.data[y][x] {
+                input.get_neighbors(&mut neighbors, x, y);
+                let number_neighbors = neighbors
+                    .iter()
+                    .filter_map(|elem| {
+                        match elem {
+                            Elem::Number(_id, val) => Some(*val),
+                            _ => None,
+                        }
+                    })
+                    .collect::<Vec<u32>>();
+                if number_neighbors.len() == 2 {
+                    res += number_neighbors[0] * number_neighbors[1]
                 }
             }
         }
