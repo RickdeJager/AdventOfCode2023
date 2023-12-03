@@ -62,11 +62,13 @@ impl Schematic {
         Some(Self { w, h, data })
     }
 
-    fn get_neighbors(&self, x: usize, y: usize) -> Vec<&Elem> {
+    fn get_neighbors<'a>(&'a self, neighbors: &mut Vec<&'a Elem>, x: usize, y: usize) {
         let x = x as isize;
         let y = y as isize;
-        let mut res = Vec::new();
-        let mut seen = Vec::new();
+        let mut seen = [0u32; 9];
+
+        // remove any stale entries from neighbors
+        neighbors.clear();
 
         for dx in (x - 1)..=(x + 1) {
             for dy in (y - 1)..=(y + 1) {
@@ -83,13 +85,12 @@ impl Schematic {
                         if seen.contains(&id) {
                             continue;
                         }
-                        seen.push(id);
+                        seen[((x - dx + 1) * 3 + (y - dy + 1)) as usize] = id;
                     }
-                    res.push(elem);
+                    neighbors.push(elem);
                 }
             }
         }
-        res
     }
 }
 
@@ -98,19 +99,20 @@ pub fn part1(input: &Schematic) -> usize {
     // Since we're looping in the same order as we assigned the IDs in, we
     // can keep track of dupes w/ a single number rather than a hash set (2x perf increase)
     let mut cur_id = 0;
+    // A reusable allocation to store neighbors
+    let mut neighbors = Vec::<&Elem>::new();
     for y in 0..input.h {
         for x in 0..input.w {
             if let Some(elem) = &input.data[y][x] {
                 if let Some(id) = elem.id {
-                    if cur_id < id
-                        && input
-                            .get_neighbors(x, y)
-                            .iter()
-                            .any(|elem| elem.symbol.is_some())
-                    {
-                        let val = elem.value.unwrap() as usize;
-                        res += val;
-                        cur_id = id;
+                    if cur_id < id {
+                        // update neighbors
+                        input.get_neighbors(&mut neighbors, x, y);
+                        if neighbors.iter().any(|elem| elem.symbol.is_some()) {
+                            let val = elem.value.unwrap() as usize;
+                            res += val;
+                            cur_id = id;
+                        }
                     }
                 }
             }
@@ -121,12 +123,13 @@ pub fn part1(input: &Schematic) -> usize {
 
 pub fn part2(input: &Schematic) -> u32 {
     let mut res = 0;
+    let mut neighbors = Vec::new();
     for y in 0..input.h {
         for x in 0..input.w {
             if let Some(elem) = &input.data[y][x] {
                 if let Some('*') = elem.symbol {
-                    let number_neighbors = input
-                        .get_neighbors(x, y)
+                    input.get_neighbors(&mut neighbors, x, y);
+                    let number_neighbors = neighbors
                         .iter()
                         .filter_map(|elem| elem.value)
                         .collect::<Vec<u32>>();
