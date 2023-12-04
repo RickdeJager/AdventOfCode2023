@@ -33,7 +33,7 @@ impl Schematic {
                     b'.' => {
                         row.push(Elem::Empty);
                     }
-                    b'0' | b'1' | b'2' | b'3' | b'4' | b'5' | b'6' | b'7' | b'8' | b'9' => {
+                    b'0'..=b'9' => {
                         let mut num = 1;
                         let mut val = (line[idx] - b'0') as u32;
                         while line.get(idx + 1).is_some_and(|x| x.is_ascii_digit()) {
@@ -120,11 +120,9 @@ pub fn part2(input: &Schematic) -> u32 {
                 input.get_neighbors(&mut neighbors, x, y);
                 let number_neighbors = neighbors
                     .iter()
-                    .filter_map(|elem| {
-                        match elem {
-                            Elem::Number(_id, val) => Some(*val),
-                            _ => None,
-                        }
+                    .filter_map(|elem| match elem {
+                        Elem::Number(_id, val) => Some(*val),
+                        _ => None,
                     })
                     .collect::<Vec<u32>>();
                 if number_neighbors.len() == 2 {
