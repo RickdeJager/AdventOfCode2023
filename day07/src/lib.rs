@@ -38,23 +38,27 @@ fn card_value(c: char, weak_joker: bool) -> u8 {
 }
 
 fn get_handtype(hand: &str) -> HandType {
-    let mut labels = hand.as_bytes().to_vec();
+    // Sure, this _looks_ really ugly, but it completely avoid allocations.
+    let mut labels = [0; 5];
+    labels.copy_from_slice(hand.as_bytes());
     labels.sort();
-    labels.dedup();
-    let label_counts: Vec<usize> = labels
-        .iter()
-        .map(|label| hand.chars().filter(|&c| c as u8 == *label).count())
-        .filter(|x| *x > 1)
-        .collect();
+    let break_points = labels.windows(2).map(|x| (x[0] != x[1]) as u8).sum();
 
-    match label_counts.as_slice() {
-        &[5] => HandType::FiveOfAKind,
-        &[4] => HandType::FourOfAKind,
-        &[2, 3] | &[3, 2] => HandType::FullHouse,
-        &[3] => HandType::ThreeOfAKind,
-        &[2, 2] => HandType::TwoPair,
-        &[2] => HandType::OnePair,
-        _ => HandType::HighCard,
+    match break_points {
+        0 => HandType::FiveOfAKind,
+        // Four of a kind or Full house
+        1 => match labels[1] == labels[3] {
+            true => HandType::FourOfAKind,
+            false => HandType::FullHouse,
+        },
+        // TwoPair or three of a kind
+        2 => match labels[0] == labels[2] || labels[1] == labels[3] || labels[2] == labels[4] {
+            true => HandType::ThreeOfAKind,
+            false => HandType::TwoPair,
+        },
+        3 => HandType::OnePair,
+        4 => HandType::HighCard,
+        _ => unreachable!(),
     }
 }
 
