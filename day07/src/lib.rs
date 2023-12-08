@@ -41,7 +41,7 @@ fn get_handtype(hand: &str) -> HandType {
     // Sure, this _looks_ really ugly, but it completely avoid allocations.
     let mut labels = [0; 5];
     labels.copy_from_slice(hand.as_bytes());
-    labels.sort();
+    labels.sort_unstable();
     let break_points = labels.windows(2).map(|x| (x[0] != x[1]) as u8).sum();
 
     match break_points {
@@ -89,7 +89,7 @@ pub fn part1(input: &[String]) -> usize {
         })
         .collect();
 
-    hands.sort_by_key(|(hand, _bid)| *hand);
+    hands.sort_unstable_by_key(|(hand, _bid)| *hand);
     hands
         .iter()
         .enumerate()
@@ -154,7 +154,7 @@ pub fn part2(input: &[String]) -> usize {
         })
         .collect();
 
-    hands.sort_by_key(|(hand, _bid)| *hand);
+    hands.sort_unstable_by_key(|(hand, _bid)| *hand);
     hands
         .iter()
         .enumerate()
